@@ -32,8 +32,7 @@ def detect_process():
      
      while True:
         
-        # TODO: convert to a blocking read and eliminate the sleep() statement in this loop
-        serialized_entry = db.lpop(config.REDIS_QUEUE_NAME)
+        serialized_entry = db.blpop(config.REDIS_QUEUE_NAME)[1]
         all_detection_results = []
         inference_time_detector = []
         
@@ -114,10 +113,7 @@ def detect_process():
                 }))
 
         # ...if serialized_entry
-        
-        else:
-            time.sleep(0.005)
-    
+      
     # ...while(True)
     
 # ...def detect_process()    
