@@ -8,7 +8,9 @@ REDIS_PORT = 6379
 # within the Docker container
 TEMP_FOLDER = '/app/temp'
 
-REDIS_QUEUE_NAME = 'camera-trap-queue'
+REDIS_DETECTOR_INPUT_QUEUE_NAME = 'camera-trap-detection_queue'
+
+REDIS_RETURN_VALUES_QUEUE_NAME = 'camera-trap-return-values_queue'
 
 # Upper limit on total content length (all images and parameters)
 MAX_CONTENT_LENGTH_IN_MB = 5 * 8  # 5MB per image * number of images allowed

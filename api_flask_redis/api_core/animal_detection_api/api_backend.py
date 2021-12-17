@@ -32,7 +32,7 @@ def detect_process():
      
      while True:
         
-        serialized_entry = db.blpop(config.REDIS_QUEUE_NAME)[1]
+        serialized_entry = db.blpop(config.REDIS_DETECTOR_INPUT_QUEUE_NAME)[1]
         all_detection_results = []
         inference_time_detector = []
         
@@ -66,9 +66,15 @@ def detect_process():
 
                 print('Detection error: ' + str(e))
                 
-                db.set(entry['id'], json.dumps({ 
+                # db.set(entry['id'], json.dumps({ 
+                #     'status': 500,
+                #     'error': 'Detection error: ' + str(e)
+                # }))
+
+                db.rpush(config.REDIS_RETURN_VALUES_QUEUE_NAME, json.dumps({ 
                     'status': 500,
-                    'error': 'Detection error: ' + str(e)
+                    'error': 'Detection error: ' + str(e),
+                    'id': entry['id']
                 }))
 
                 continue
@@ -98,18 +104,31 @@ def detect_process():
                             res.append(int(d['category']))
                             detections[image_name].append(res)
     
-                db.set(entry['id'], json.dumps({ 
+                # db.set(entry['id'], json.dumps({ 
+                #     'status': 200,
+                #     'detections': detections,
+                #     'inference_time_detector': inference_time_detector
+                # }))
+
+                db.rpush(config.REDIS_RETURN_VALUES_QUEUE_NAME, json.dumps({ 
                     'status': 200,
                     'detections': detections,
-                    'inference_time_detector': inference_time_detector
+                    'inference_time_detector': inference_time_detector,
+                    'id': entry['id']
                 }))
               
             except Exception as e:
                 print('Error consolidating the detection boxes: ' + str(e))
                 
-                db.set(entry['id'], json.dumps({ 
+                # db.set(entry['id'], json.dumps({ 
+                #     'status': 500,
+                #     'error': 'Error consolidating the detection boxes:' + str(e)
+                # }))
+
+                db.rpush(config.REDIS_RETURN_VALUES_QUEUE_NAME, json.dumps({ 
                     'status': 500,
-                    'error': 'Error consolidating the detection boxes:' + str(e)
+                    'error': 'Error consolidating the detection boxes:' + str(e),
+                    'id': entry['id']
                 }))
 
         # ...if serialized_entry

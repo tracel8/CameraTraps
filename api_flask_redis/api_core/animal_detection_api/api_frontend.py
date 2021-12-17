@@ -162,82 +162,84 @@ def detect_sync():
             return _make_error_object(500, 'Error saving images: ' + str(e))
         
         # Submit the image(s) for processing by api_backend.py, who is waiting on this queue
-        db.rpush(config.REDIS_QUEUE_NAME, json.dumps(d))
+        db.rpush(config.REDIS_DETECTOR_INPUT_QUEUE_NAME, json.dumps(d))
         
-        while True:
-            
-            # TODO: convert to a blocking read and eliminate the sleep() statement in this loop
-            result = db.get(redis_id)
-            
-            if result:
-                
-                result = json.loads(result.decode())
-                print('Processing result {}'.format(str(result)))
-                
-                if result['status'] == 200:
-                    detections = result['detections']
-                    db.delete(redis_id)
-                
-                else:
-                    db.delete(redis_id)
-                    print('Detection error: ' + str(result))
-                    return _make_error_response(500, 'Detection error: ' + str(result))
+        has_result = False
+        result = None
 
-                try:
-                    print('detect_sync: postprocessing and sending images back...')
-                    fields = {
-                        'detection_result': ('detection_result', json.dumps(detections), 'application/json'),
-                    }
+        while not has_result:
 
-                    if render_boxes and result['status'] == 200:
+            serailized_entry = db.blpop(config.REDIS_RETURN_VALUES_QUEUE_NAME)[1]
+            result = json.loads(serailized_entry)
 
-                        print('Rendering images')
-
-                        for image_name, detections in detections.items():
-                            
-                            #image = Image.open(os.path.join(temp_direc, image_name))
-                            image = open(f'{temp_direc}/{image_name}', "rb")
-                            image = viz_utils.load_image(image)
-                            width, height = image.size
-
-                            _detections = []
-                            for d in detections:
-                                y1,x1,y2,x2 = d[0:4]
-                                width = x2 - x1
-                                height = y2 - y1
-                                bbox = [x1,y1,width,height]
-                                _detections.append({'bbox': bbox, 'conf': d[4], 'category': d[5]}) 
-                            
-                            viz_utils.render_detection_bounding_boxes(_detections, image, 
-                            confidence_threshold=rendering_confidence_threshold)
-                            
-                            output_img_stream = BytesIO()
-                            image.save(output_img_stream, format='jpeg')
-                            output_img_stream.seek(0)
-                            fields[image_name] = (image_name, output_img_stream, 'image/jpeg')
-                        print('Done rendering images')
-                        
-                    m = MultipartEncoder(fields=fields)                    
-                    return Response(m.to_string(), mimetype=m.content_type)
-
-                except Exception as e:
-                    
-                    print(traceback.format_exc())
-                    print('Error returning result or rendering the detection boxes: ' + str(e))
-
-                finally:
-                    
-                    try:
-                        print('Removing temporary files')
-                        shutil.rmtree(temp_direc)
-                    except Exception as e:
-                        print('Error removing temporary folder {}: {}'.format(temp_direc,str(e)))
-                    
+            if result["id"] == redis_id:
+                has_result = True
             else:
-                time.sleep(0.005)
+                db.rpush(config.REDIS_RETURN_VALUES_QUEUE_NAME, json.dumps(result))
+                    
+        print('Processing result {}'.format(str(result)))
+        
+        if result['status'] == 200:
+            detections = result['detections']
+        
+        else:
+            print('Detection error: ' + str(result))
+            return _make_error_response(500, 'Detection error: ' + str(result))
+
+        try:
+            print('detect_sync: postprocessing and sending images back...')
+            fields = {
+                'detection_result': ('detection_result', json.dumps(detections), 'application/json'),
+            }
+
+            if render_boxes and result['status'] == 200:
+
+                print('Rendering images')
+
+                for image_name, detections in detections.items():
+                    
+                    #image = Image.open(os.path.join(temp_direc, image_name))
+                    image = open(f'{temp_direc}/{image_name}', "rb")
+                    image = viz_utils.load_image(image)
+                    width, height = image.size
+
+                    _detections = []
+                    for d in detections:
+                        y1,x1,y2,x2 = d[0:4]
+                        width = x2 - x1
+                        height = y2 - y1
+                        bbox = [x1,y1,width,height]
+                        _detections.append({'bbox': bbox, 'conf': d[4], 'category': d[5]}) 
+                    
+                    viz_utils.render_detection_bounding_boxes(_detections, image, 
+                    confidence_threshold=rendering_confidence_threshold)
+                    
+                    output_img_stream = BytesIO()
+                    image.save(output_img_stream, format='jpeg')
+                    output_img_stream.seek(0)
+                    fields[image_name] = (image_name, output_img_stream, 'image/jpeg')
+                print('Done rendering images')
                 
-            # ...if we do/don't have a request available on the queue
+            m = MultipartEncoder(fields=fields)                    
+            return Response(m.to_string(), mimetype=m.content_type)
+
+        except Exception as e:
             
+            print(traceback.format_exc())
+            print('Error returning result or rendering the detection boxes: ' + str(e))
+
+        finally:
+            
+            try:
+                print('Removing temporary files')
+                shutil.rmtree(temp_direc)
+            except Exception as e:
+                print('Error removing temporary folder {}: {}'.format(temp_direc,str(e)))
+            
+        
+            
+        # ...if we do/don't have a request available on the queue
+        
         # ...while(True)
 
     except Exception as e:
