@@ -8,11 +8,25 @@ import numpy as np
 from detection.run_detector import CONF_DIGITS, COORD_DIGITS, FAILURE_INFER
 from ct_utils import truncate_float
 
+import os
+num_cores = 1
+
+os.environ["OMP_NUM_THREADS"] = str(num_cores)
+os.environ["TF_NUM_INTRAOP_THREADS"] = str(num_cores)
+os.environ["TF_NUM_INTEROP_THREADS"] = str(num_cores)
+
 import tensorflow.compat.v1 as tf
 
 print('TensorFlow version:', tf.__version__)
 print('Is GPU available? tf.test.is_gpu_available:', tf.test.is_gpu_available())
 
+config = tf.ConfigProto(intra_op_parallelism_threads=num_cores,
+                        inter_op_parallelism_threads=num_cores, 
+                        allow_soft_placement=True,
+                        device_count = {'CPU': num_cores})
+tf.config.threading.set_inter_op_parallelism_threads(num_cores)                   
+tf.config.threading.set_intra_op_parallelism_threads(num_cores)                   
+tf.config.set_soft_device_placement(True)
 
 class TFDetector:
     """
@@ -29,8 +43,8 @@ class TFDetector:
         """Loads model from model_path and starts a tf.Session with this graph. Obtains
         input and output tensor handles."""
         detection_graph = TFDetector.__load_model(model_path)
-        self.tf_session = tf.Session(graph=detection_graph)
-
+        self.tf_session = tf.Session(graph=detection_graph,config=config)
+        
         self.image_tensor = detection_graph.get_tensor_by_name('image_tensor:0')
         self.box_tensor = detection_graph.get_tensor_by_name('detection_boxes:0')
         self.score_tensor = detection_graph.get_tensor_by_name('detection_scores:0')
