@@ -215,7 +215,7 @@ git clone https://github.com/ecologize/yolov5/
 git clone https://github.com/ecologize/CameraTraps
 git clone https://github.com/Microsoft/ai4eutils
 cd c:\git\cameratraps
-conda env create --file environment-detector.yml
+conda env create --file envs/environment-detector.yml
 conda activate cameratraps-detector
 set PYTHONPATH=%PYTHONPATH%;c:\git\CameraTraps;c:\git\ai4eutils;c:\git\yolov5
 ```
@@ -250,7 +250,7 @@ git clone https://github.com/ecologize/yolov5/
 git clone https://github.com/ecologize/CameraTraps
 git clone https://github.com/Microsoft/ai4eutils
 cd ~/git/cameratraps
-conda env create --file environment-detector.yml
+conda env create --file envs/environment-detector.yml
 conda activate cameratraps-detector
 export PYTHONPATH="$PYTHONPATH:$HOME/git/CameraTraps:$HOME/git/ai4eutils:$HOME/git/yolov5"
 ```
@@ -287,7 +287,7 @@ git clone https://github.com/ecologize/yolov5/
 git clone https://github.com/ecologize/CameraTraps
 git clone https://github.com/Microsoft/ai4eutils
 cd ~/git/cameratraps
-conda env create --file environment-detector-mac.yml
+conda env create --file envs/environment-detector-mac.yml
 conda activate cameratraps-detector
 export PYTHONPATH="$PYTHONPATH:$HOME/git/CameraTraps:$HOME/git/ai4eutils:$HOME/git/yolov5"
 ```
@@ -558,7 +558,7 @@ cd ~/git
 git clone https://github.com/ecologize/CameraTraps
 git clone https://github.com/Microsoft/ai4eutils
 cd ~/git/cameratraps
-conda env create --file environment-detector-mac.yml
+conda env create --file envs/environment-detector-mac.yml
 conda activate cameratraps-detector
 export PYTHONPATH="$PYTHONPATH:$HOME/git/CameraTraps:$HOME/git/ai4eutils"
 ```
